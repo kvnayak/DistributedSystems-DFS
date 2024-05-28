@@ -19,12 +19,18 @@ if not os.path.exists(UPLOAD_FOLDER):
 def upload_file():
     return render_template('index.html')
 
+@app.route('/downloader', methods=['GET', 'POST'])
+
+
 @app.route('/uploader', methods=['GET', 'POST'])
 def uploader():
     if request.method == 'POST':
         if 'file' not in request.files:
             return 'No file part'
         file = request.files['file']
+        print(request)
+        print("......")
+        print(file.read())
         if file.filename == '':
             return 'No selected file'
         if file:
@@ -59,17 +65,13 @@ def uploader():
                 print(f"Error resolving DNS name: {e}")
                 exit(1)
 
-
             #Code to save the file in the local
             # print(f"File: {file}")
             # print(f"File name: {file.filename}")
             # filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             # file.save(filepath)
             # print("Uploading file", file.filename)
-            
-
-
-
+        
             print("Uploading file", file.filename)
             # If not found send lookup request to get peer to upload file
             sDataList = [1]
@@ -78,11 +80,8 @@ def uploader():
             else:
                 sDataList.append(-1)
             try:
-                filename = "myfile.txt"
+                filename = file.filename
                 recvIPport = ("127.0.0.1", 8030)    #IP and port of the load balancer to send the file
-                # Before doing anything check if you have the file or not
-                file = open(filename, 'rb')
-                file.close()
                 sDataList = sDataList + [filename]
 
                 #sending the file_name to load_balancer
@@ -90,11 +89,7 @@ def uploader():
                 cSocket.connect(recvIPport)
                 cSocket.sendall(pickle.dumps(sDataList))
 
-
-                #sending the file data to the load balancer
-                with open(filename, 'rb') as file:
-                #connection.send(pickle.dumps(fileSize))
-                    while True:
+                while True:
                         fileData = file.read(buffer)
                         time.sleep(0.001)
                         #print(fileData)
