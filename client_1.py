@@ -20,6 +20,44 @@ def upload_file():
     return render_template('index.html')
 
 @app.route('/downloader', methods=['GET', 'POST'])
+def downloader():
+    recvIPport = ("127.0.0.1", 8030)
+    filename = request.form['file_name']
+    print(filename)
+    print("Downloading file", filename)
+
+    sDataList = [1, 0, filename]
+    cSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    cSocket.connect(recvIPport)
+    cSocket.sendall(pickle.dumps(sDataList))      
+    # Receiving confirmation if file found or not
+    fileData = cSocket.recv(buffer)
+    if fileData == b"NotFound":
+        print("File not found:", filename)
+        return "File not found"
+    else:
+        print("Receiving file:", filename)
+        #receiveFile(cSocket, filename)
+
+        totalData = b''
+        recvSize = 0
+        try:
+            with open(filename, 'wb') as file:
+                while True:
+                    fileData = cSocket.recv(buffer)
+                    #print(fileData)
+                    recvSize += len(fileData)
+                    #print(recvSize)
+                    if not fileData:
+                        break
+                    totalData += fileData
+                file.write(totalData)
+        except Exception as e:
+            print(f"An exception occurred: {type(e)._name_}")
+            print(f"Reason: {str(e)}")
+            print("Traceback:")
+            traceback.print_exc()  # Print the full traceback
+        return "File downloaded"
 
 
 @app.route('/uploader', methods=['GET', 'POST'])
@@ -100,8 +138,6 @@ def uploader():
                 cSocket.close()
                 print("File uploaded")
             except Exception as e:
-                print("File not in directory")
-                #print(f"...Exception: {e}")
                 print(f"An exception occurred: {type(e)._name_}")
                 print(f"Reason: {str(e)}")
                 print("Traceback:")
