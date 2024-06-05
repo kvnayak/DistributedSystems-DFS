@@ -25,8 +25,8 @@ class Node:
         self.successor = (ip, port)
         self.successorID = self.id
         self.fingerTable = OrderedDict()
-        self.leader = self.address
-        self.leaderID = self.id
+        self.leader = None
+        self.leaderID = None
         self.lb = [(config.LB1_IP, config.LB1_PORT)]
         # , (IP, config.LB2_PORT)]
         self.message_handler = {
@@ -548,7 +548,7 @@ class Node:
                     self.initiateLeaderElection()
                 self.print_node_options()
 
-    def configThread(self):
+    def config_thread(self):
         self.print_node_options()
         action = input()
         match action:
@@ -573,10 +573,25 @@ class Node:
     def spin_up(self):
         # start listening to requests
         threading.Thread(target=self.start_listening, args=()).start()
-        #
         threading.Thread(target=self.ping_successor, args=()).start()
+        try: 
+            lb_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            lb_socket.connect(self.lb[0])
+            print(f"Getting leader information from: {self.lb[0]}")
+            lb_socket.sendall(pickle.dumps([3]))
+            leader_info = pickle_loads(lb_scoket.recv(config.BUFFER))
+            lb_socket.close()
+            if leader_info[0] == -1:
+                self.initiateLeaderElection()
+            else
+                self.leader = leader_info[1]
+                self.leaderID = leader_info[2]
+                self.network_join_request(self.leader[0], int(self.leader[1]))
+        except socket.error:
+            print("Socket error")
+
         while True:
-            self.configThread()
+            self.config_thread()
 
 
 IP = config.IP
