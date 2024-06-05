@@ -27,6 +27,7 @@ class LoadBalancer:
         self.server_socket = None
         self.leader_host = None
         self.leader_port = None
+        self.leader_id = None
         try:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.bind((self.host, self.port))
@@ -44,9 +45,9 @@ class LoadBalancer:
                 print("Connection accepted from address ", address)
                 connection.settimeout(120)
                 threading.Thread(target=self.connectionThread, args=(connection, address)).start()
-                #self.leader_host, self.leader_port = leader_info.split(":")
-                #print(f"New leader: {self.leader_host}:{self.leader_port}")
-                #client_socket.close()
+                # self.leader_host, self.leader_port = leader_info.split(":")
+                # print(f"New leader: {self.leader_host}:{self.leader_port}")
+                # client_socket.close()
             except socket.error:
                 print("Error: Connection not accepted. Try again.")
 
@@ -63,14 +64,25 @@ class LoadBalancer:
         rDataList = pickle.loads(connection.recv(buffer))
         connectionType = rDataList[0]
         print("Main function rDataList ", rDataList)
-        if connectionType == 0: # for leader announcement
+        if connectionType == 0:  # for leader announcement
             print("\nConnection type 1")
             print("\nConnection with:", address[0], ":", address[1])
             print(f"Leader Elected: {rDataList[1]} : {rDataList[2]}")
+            self.leader_id = rDataList[1]
             self.leader_host = rDataList[2][0]
             self.leader_port = rDataList[2][1]
-            print("Leader host : "+ str(self.leader_host)+" Leader port : "+ str(self.leader_port))
-        elif connectionType == 1: # for file upload
+            print("Leader host : " + str(self.leader_host) + " Leader port : " + str(self.leader_port))
+        elif connectionType == 3:  # check existing leader
+            print("\nConnection type 3")
+            if not self.leader_id:
+                print("Leader not elected yet")
+                data_list = [-1]
+            else:
+                print("Leader already exists")
+                data_list = [1, (self.leader_host, self.leader_port), self.leader_id]
+            connection.sendall(pickle.dumps(data_list))
+            connection.close()
+        elif connectionType == 1:  # for file upload
             upload_file_name = rDataList[2]
             received_file = b''
             count = 0
@@ -94,10 +106,9 @@ class LoadBalancer:
             leader_socket.close()
             target_address = leader_response_list[1]
 
-
             # load balancer connects to the target node to upload the file
             target_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            target_datalist = [1, 1,  upload_file_name]
+            target_datalist = [1, 1, upload_file_name]
             target_socket.connect(target_address)
             target_socket.sendall(pickle.dumps(target_datalist))
             print("received_file size ", len(received_file))
@@ -114,7 +125,7 @@ class LoadBalancer:
             '''
             print("File uploaded to target node from lb")
             target_socket.close()
-        elif connectionType == 2: # for file download
+        elif connectionType == 2:  # for file download
             download_file_name = rDataList[2]
             # load balancer connects to the leader node to get the target node
             leader_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -148,19 +159,21 @@ class LoadBalancer:
                     data = target_socket.recv(buffer)
                     if not data:
                         break
-                    #print("data from target ", count, data)
+                    # print("data from target ", count, data)
                     connection.sendall(data)
                     received_file += data
-                    #print("data for client ", data)
+                    # print("data for client ", data)
 
-                    #received_file += data
+                    # received_file += data
                 print("file len of received_file at load balancer ", len(received_file))
 
                 target_socket.close()
                 connection.close()
+
     def start(self):
         # Accepting connections
         threading.Thread(target=self.start_listening(), args=()).start()
+
 
 if __name__ == "__main__":
     # app.run(host='0.0.0.0', port=8030)
@@ -169,4 +182,4 @@ if __name__ == "__main__":
     lb.start()
     lb.ServerSocket.close()
     # lb.start_listening()
-    #threading.Thread(target=lb.start_listening, args=()).start()
+    # threading.Thread(target=lb.start_listening, args=()).start()

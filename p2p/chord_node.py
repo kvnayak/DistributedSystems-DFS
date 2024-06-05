@@ -448,7 +448,7 @@ class Node:
     def joinNetwork(self, connection, address, request):
         print("Connection with:", address[0], ":", address[1])
         print("Join network request recevied")
-        self.joinNode(connection, address, request)
+        self.join_node(connection, address, request)
         return
 
     def fileRequest(self, connection, address, request):
@@ -514,7 +514,7 @@ class Node:
                 p_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 p_socket.connect(self.successor)
                 p_socket.sendall(pickle.dumps([2]))  # Send ping request
-                # recvPred = pickle.loads(p_socket.recv(config.BUFFER))
+                recvPred = pickle.loads(p_socket.recv(config.BUFFER))
             except:
                 # When not receiving ping ack from successor. Searching for the next successor from Finger table and stabilizing
                 print("\nSuccesor node is offline!\nSelf Stabilization in progress...")
@@ -579,11 +579,11 @@ class Node:
             lb_socket.connect(self.lb[0])
             print(f"Getting leader information from: {self.lb[0]}")
             lb_socket.sendall(pickle.dumps([3]))
-            leader_info = pickle_loads(lb_scoket.recv(config.BUFFER))
+            leader_info = pickle.loads(lb_socket.recv(config.BUFFER))
             lb_socket.close()
             if leader_info[0] == -1:
                 self.initiateLeaderElection()
-            else
+            else:
                 self.leader = leader_info[1]
                 self.leaderID = leader_info[2]
                 self.network_join_request(self.leader[0], int(self.leader[1]))
