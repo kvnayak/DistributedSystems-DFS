@@ -7,6 +7,8 @@ pip install dnslib
 pip install flask
 git clone
 
+
+
 python load_balancer.py 127.0.0.1
 
 Based on number of chord nodes required change the port and run that many instances
