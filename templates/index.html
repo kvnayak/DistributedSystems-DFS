@@ -60,6 +60,14 @@
          <input type="submit">
       </form>
 
+      {% with messages = get_flashed_messages() %}
+         {% if messages %}
+            {% for message in messages %}
+               <h3>{{ message}}</h3>
+            {% endfor %}
+         {% endif %}
+      {% endwith %}
+
 
       <h2>File Download</h2>
       <form action="/downloader" method="POST" enctype="multipart/form-data">

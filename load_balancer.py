@@ -1,22 +1,11 @@
 import socket, threading, pickle
 from flask import Flask, request
-import time
+import time, sys
+from config import Config
 
-app = Flask(__name__)
-IP = "127.0.0.1"
-PORT = 8030
-buffer = 4096
-
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return "No file part", 400
-    file = request.files['file']
-    if file.filename == '':
-        return "No selected file", 400
-    file.save(f"/path/to/save/{file.filename}")
-    return "File uploaded successfully", 200
+with open('systemconfig.cfg', 'r') as f:
+    cfg = Config(f)
+buffer = cfg.get('buffer')
 
 
 # Load Balancer
@@ -49,7 +38,9 @@ class LoadBalancer:
                 # print(f"New leader: {self.leader_host}:{self.leader_port}")
                 # client_socket.close()
             except socket.error:
+                print(socket.error)
                 print("Error: Connection not accepted. Try again.")
+
 
     def connectionThread(self, connection, address):
         print("Connection thread called ", connection, address)
@@ -174,12 +165,16 @@ class LoadBalancer:
         # Accepting connections
         threading.Thread(target=self.start_listening(), args=()).start()
 
+with open('systemconfig.cfg', 'r') as f:
+    cfg = Config(f)
 
 if __name__ == "__main__":
-    # app.run(host='0.0.0.0', port=8030)
-    lb = LoadBalancer("127.0.0.1", 8030)
-    # print("My ID is:", myNode.id)
+    lb_port = cfg.get('lb_port')
+    lb_ip = "127.0.0.1"
+    if len(sys.argv) < 2:
+        print("IP not specified as arguments. Using defaults from config file.")
+    else:
+        lb_ip = sys.argv[1]
+    lb = LoadBalancer(lb_ip, int(lb_port))
     lb.start()
     lb.ServerSocket.close()
-    # lb.start_listening()
-    # threading.Thread(target=lb.start_listening, args=()).start()
