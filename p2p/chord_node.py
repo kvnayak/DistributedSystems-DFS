@@ -30,18 +30,27 @@ class Node:
         self.lb = [(config.LB1_IP, config.LB1_PORT)]
         # , (IP, config.LB2_PORT)]
         self.message_handler = {
-            0: self.joinNetwork,
-            1: self.fileRequest,
-            2: self.pingRequest,
+            0: self.join_network,
+            1: self.file_request,
+            2: self.ping_request,
             3: self.lookup_ID,
-            4: self.neighborUpdate,
+            4: self.neighbor_update,
             5: self.stabilize,
-            6: self.forwardLeaderRequest,
-            7: self.forwardLeaderAnnouncement,
-            8: self.findNode,
-            9: self.uploadToNode,
-            10: self.downloadFromNode,
-            11: lambda conn, addr, req: self.initiateLeaderElection()}
+            6: self.forward_leader_request,
+            7: self.forward_leader_announcement,
+            8: self.find_node,
+            9: self.upload_to_node,
+            10: self.download_from_node,
+            11: lambda conn, addr, req: self.initiate_leader_election()
+            }
+        
+        self.config_handler = {
+            1: self.join_handle,
+            2: self.leave_network,
+            3: self.print_finger_table,
+            4: print("My ID:", self.id, "Predecessor:", self.predecessorID, "Successor:", self.successorID),
+            5: print("Leader: ", self.leaderID)
+        }
 
         try:
             self.ServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -140,7 +149,7 @@ class Node:
             peer_socket.close()
 
             # Initiating Leader election after new node joins
-            self.initiateLeaderElection()
+            self.initiate_leader_election()
 
         except socket.error:
             print("Socket error. Provide valid IP/Port.")
@@ -174,7 +183,7 @@ class Node:
         self.update_peer_finger_table()
         # if leader leaves then elect new leader
         if self.address == self.leader:
-            self.updateLeader()
+            self.update_leader()
 
         # updating the successor and predeccor
         self.predecessor = (self.ip, self.port)
@@ -358,7 +367,7 @@ class Node:
 
     '''...................................................LEADER ELECTION.....................................................'''
 
-    def updateLeader(self):
+    def update_leader(self):
         print("Initiating Leader Election for other nodes in the network")
         try:
             lSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -368,7 +377,7 @@ class Node:
         except socket.error:
             print("Error when initiating leader election for other nodes")
 
-    def initiateLeaderElection(self):
+    def initiate_leader_election(self):
         print("Initiating Leader Election")
         try:
             lSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -378,18 +387,18 @@ class Node:
         except socket.error:
             print("Error when initiating leader election")
 
-    def forwardLeaderRequest(self, connection, address, request):
+    def forward_leader_request(self, connection, address, request):
         print("Forwarding Leader Election Request...")
         if self.id == request[1]:
             print("I am elected as the leader")
-            self.initiateLeaderAnnouncement()
+            self.initiate_leader_announcement()
         elif self.id > request[1]:
             request[1] = self.id
-            self.sendLeaderRequest(request)
+            self.send_leader_request(request)
         else:
-            self.sendLeaderRequest(request)
+            self.send_leader_request(request)
 
-    def sendLeaderRequest(self, request):
+    def send_leader_request(self, request):
         try:
             lSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             lSocket.connect(self.successor)
@@ -398,7 +407,7 @@ class Node:
         except socket.error:
             print("Error when initiating leader election")
 
-    def initiateLeaderAnnouncement(self):
+    def initiate_leader_announcement(self):
         self.leaderID = self.id
         self.leader = self.address
         print("Initiating Leader announcement")
@@ -416,7 +425,7 @@ class Node:
         except socket.error:
             print("Error when initiating leader election")
 
-    def forwardLeaderAnnouncement(self, connection, address, request):
+    def forward_leader_announcement(self, connection, address, request):
         if self.id == request[1]:
             print("Leader Election complete")
             return
@@ -445,22 +454,22 @@ class Node:
 
     '''............................................BASE FUNCTIONALITIES HANDLING............................................'''
 
-    def joinNetwork(self, connection, address, request):
+    def join_network(self, connection, address, request):
         print("Connection with:", address[0], ":", address[1])
         print("Join network request recevied")
         self.join_node(connection, address, request)
         return
 
-    def fileRequest(self, connection, address, request):
+    def file_request(self, connection, address, request):
         print("Connection with:", address[0], ":", address[1])
         print("Upload/Download request recevied")
         self.file_request_handler(connection, address, request)
         return
 
-    def pingRequest(self, connection, address, request):
+    def ping_request(self, connection, address, request):
         connection.sendall(pickle.dumps(self.predecessor))
 
-    def neighborUpdate(self, connection, address, request):
+    def neighbor_update(self, connection, address, request):
         if request[1] == 1:
             self.update_successor(request)
         else:
@@ -470,17 +479,17 @@ class Node:
         self.update_finger_table()
         connection.sendall(pickle.dumps(self.successor))
 
-    def findNode(self, connection, address, request):
+    def find_node(self, connection, address, request):
         fileID = getHash(request[1])
         target_node_ip_port = self.find_successor(self.successor, fileID)
         connection.sendall(pickle.dumps([1, target_node_ip_port]))
 
-    def uploadToNode(self, connection, address, request):
+    def upload_to_node(self, connection, address, request):
         filename = request[1]
         file_content = request[2]
         self.acceptFile(filename, file_content, True)
 
-    def downloadFromNode(self, connection, address, request):
+    def download_from_node(self, connection, address, request):
         filename = request[1]
         self.downloadFile(filename)
 
@@ -493,6 +502,11 @@ class Node:
         except KeyError:
             print("Received an invalid message type")
             connection.close()
+    
+    def join_handle(self):
+        ip = input("Enter IP of node: ")
+        port = input("Enter port: ")
+        self.network_join_request(ip, int(port))
 
     def start_listening(self):
         while True:
@@ -545,30 +559,14 @@ class Node:
                 print(f"Failed successor: {failed_successor}")
                 if failed_successor == self.leader:
                     print("Failed successor was a leader")
-                    self.initiateLeaderElection()
+                    self.initiate_leader_election()
                 self.print_node_options()
 
     def config_thread(self):
         self.print_node_options()
         action = input()
-        match action:
-            case '1':
-                ip = input("Enter IP of node: ")
-                port = input("Enter port: ")
-                self.network_join_request(ip, int(port))
-                return
-            case '2':
-                self.leave_network()
-                return
-            case '3':
-                self.print_finger_table()
-                return
-            case '4':
-                print("My ID:", self.id, "Predecessor:", self.predecessorID, "Successor:", self.successorID)
-                return
-            case '5':
-                print("Leader: ", self.leaderID)
-                return
+        self.config_handler[int(action)]()
+        return
 
     def spin_up(self):
         # start listening to requests
@@ -582,7 +580,7 @@ class Node:
             leader_info = pickle.loads(lb_socket.recv(config.BUFFER))
             lb_socket.close()
             if leader_info[0] == -1:
-                self.initiateLeaderElection()
+                self.initiate_leader_election()
             else:
                 self.leader = leader_info[1]
                 self.leaderID = leader_info[2]
