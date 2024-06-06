@@ -30,7 +30,9 @@ class Node:
         self.fingerTable = OrderedDict()
         self.leader = None
         self.leaderID = None
-        self.lb = [(cfg.get("lb1_ip"), cfg.get("lb_port")), (cfg.get("lb2_ip"), cfg.get("lb_port"))]
+        self.lb = [(cfg.get("lb1_ip"), cfg.get("lb_port"))]
+        if cfg.get("lb2_ip"):
+            self.lb.append((cfg.get("lb2_ip"), cfg.get("lb_port")));
         self.message_handler = {
             0: self.join_network,
             1: self.file_request,
