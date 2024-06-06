@@ -5,7 +5,9 @@ from config import Config
 with open('systemconfig.cfg', 'r') as f:
     cfg = Config(f)
 # Define the IP addresses of your two load balancers
-load_balancer_ips = [cfg.get('lb1_ip'), cfg.get('lb2_ip')]
+load_balancer_ips = [cfg.get('lb1_ip')]
+if cfg.get("lb2_ip"):
+    load_balancer_ips.append(cfg.get('lb2_ip')); 
 # Define the domain name and record type
 domain = "example.com."
 record_type = "A"
