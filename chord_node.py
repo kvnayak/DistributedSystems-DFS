@@ -87,7 +87,6 @@ class Node:
             self.update_peer_finger_table()
             self.print_node_options()
 
-    #TODO check the requirement
     def lookup_ID(self, connection, address, request):
         keyID = request[1]
         data = []
@@ -125,7 +124,6 @@ class Node:
         self.predecessor = newPred
         self.predecessorID = getHash(newPred[0] + ":" + str(newPred[1]))
 
-    # sendJoinRequest
     def network_join_request(self, ip, port):
         try:
             print("Distributed systems network join requested initiated...")
@@ -136,7 +134,7 @@ class Node:
             data = [0, self.address]
 
             peer_socket.sendall(pickle.dumps(data))  # Sending self peer address to add to network
-            node_info = pickle.loads(peer_socket.recv(cfg.get("buffer")))  # Receiving new pred
+            node_info = pickle.loads(peer_socket.recv(cfg.get("buffer")))  # Receiving new predecessor
 
             # Updating pred and succ
             self.predecessor = node_info[0]
@@ -197,7 +195,6 @@ class Node:
         self.fingerTable.clear()
         print(f"Leaving the network... \nNode: {self.id}\n Address: {self.address}")
 
-    # getSuccessor
     def find_successor(self, address, keyID):
         request = [1, address]
         node_ip_port = request[1]
@@ -224,8 +221,7 @@ class Node:
             if self.successor == self.address:
                 self.fingerTable[entryId] = (self.id, self.address)
                 continue
-
-            # Find succ for each entryID and update table
+            # Find successor for each entryID and update table
             succ_addr = self.find_successor(self.successor, entryId)
             recvId = getHash(succ_addr[0] + ":" + str(succ_addr[1]))
             self.fingerTable[entryId] = (recvId, succ_addr)
@@ -248,12 +244,10 @@ class Node:
                 print("Connection denied...")
 
     '''......................................................FILE HANDLING...................................................'''
-    # transferfile
     def file_request_handler(self, connection, address, rDataList):
         # Choice: 0 = download, 1 = upload
         action = rDataList[1]
         filename = rDataList[2]
-        # IF client wants to download file
         if action == 0:
             print("Download request for file:", filename)
             try:
@@ -261,13 +255,12 @@ class Node:
                 if filename not in self.filenameList:
                     connection.send("NotFound".encode('utf-8'))
                     print("File not found")
-                else:  # If file exists in its directory   # Sending DATA LIST Structure (sDataList):
+                else:
                     connection.send("Found".encode('utf-8'))
                     self.retrieve_file(connection, filename)
             except ConnectionResetError as error:
                 print("Error in socket connection...")
                 print(error, "\nClient disconnected\n\n")
-        # if client wants to upload files to network
         elif action == 1 or action == -1:
             print("Saving file:", filename)
             fileID = getHash(filename)
@@ -523,9 +516,8 @@ class Node:
 
     def ping_successor(self):
         while True:
-            # Pingin successor every 3 seconds
+            # ping successor every 3 seconds
             time.sleep(3)
-            # If only one node, no need to ping
             if self.address == self.successor:
                 continue
             try:
