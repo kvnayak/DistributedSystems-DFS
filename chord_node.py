@@ -66,7 +66,6 @@ class Node:
 
     '''..................................................FINGER TABLE HANDLING................................................'''
 
-    #TODO check difference with send join request
     # Deals with join network request by other node
     def join_node(self, connection, address, request):
         if request:
@@ -90,19 +89,18 @@ class Node:
     def lookup_ID(self, connection, address, request):
         keyID = request[1]
         data = []
-        if self.id == keyID:  # Case 0: If keyId is current node
+        if self.id == keyID:  
             data = [0, self.address]
-        elif self.successorID == self.id:  # Case 1: If only one node
+        elif self.successorID == self.id:  
             data = [0, self.address]
-        elif self.id > keyID:  # Case 2: Node id greater than keyId, ask pred
-            if self.predecessorID < keyID:  # If pred is higher than key, then self is the node
+        elif self.id > keyID:  
+            if self.predecessorID < keyID:  
                 data = [0, self.address]
             elif self.predecessorID > self.id:
                 data = [0, self.address]
             else:  # Else send the pred back
                 data = [1, self.predecessor]
-        else:  # Case 3: node id less than keyId USE fingertable to search
-            # IF last node before chord circle completes
+        else:  
             if self.id > self.successorID:
                 data = [0, self.successor]
             else:
@@ -136,13 +134,13 @@ class Node:
             peer_socket.sendall(pickle.dumps(data))  # Sending self peer address to add to network
             node_info = pickle.loads(peer_socket.recv(cfg.get("buffer")))  # Receiving new predecessor
 
-            # Updating pred and succ
+            # Updating predecessor and successor
             self.predecessor = node_info[0]
             self.predecessorID = node_info[1]
             self.successor = succ_addr
             self.successorID = getHash(succ_addr[0] + ":" + str(succ_addr[1]))
 
-            # Tell pred to update its successor which is now me
+            # Tell predecessor to update its successor which is now me
             data = [4, 1, self.address]
             p_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             p_socket2.connect(self.predecessor)
