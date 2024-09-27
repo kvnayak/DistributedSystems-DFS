@@ -3,6 +3,7 @@ A lightweight implementation of a distributed file system (DFS) showcasing core 
 Ideal for learning and experimenting with fundamental DFS principles and distributed computing challenges.
 
 **Local System Setup**
+
 sudo apt-get install python
 
 pip install dnslib
